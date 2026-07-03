@@ -20,11 +20,10 @@ jobs:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
           MONITORS_JSON: ${{ secrets.MONITORS_JSON }}
         run: |
-          for i in 1 2; do
+          for i in $(seq 1 10); do
             echo "=== Cycle $i ==="
             node scripts/monitor.js
-            echo "Sleeping 30s..."
-            sleep 30
+            [ "$i" -lt 10 ] && echo "Sleeping 25s..." && sleep 25
           done
 
       - name: Commit state
