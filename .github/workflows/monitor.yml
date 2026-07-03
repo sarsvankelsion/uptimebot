@@ -1,14 +1,9 @@
 name: Uptime Monitor
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
-
-permissions:
-  contents: write
+  repository_dispatch:
+    types: [trigger]
 
 jobs:
   check:
@@ -33,13 +28,7 @@ jobs:
           MONITORS_JSON: ${{ secrets.MONITORS_JSON }}
         shell: bash
         run: |
-          echo "Starting..."
-          pwd
-          ls -la
-          echo "Node version:"
-          node --version
           node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
-          echo "All cycles done"
 
       - name: Commit state
         run: |
@@ -47,6 +36,14 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes"
           else
-            git commit -m "update state"
+            git commit -m "update state [skip ci]"
             git push origin HEAD:main
           fi
+
+      - name: Trigger next run
+        run: |
+          curl -X POST \
+            -H "Authorization: bearer ${{ secrets.PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type":"trigger"}'
