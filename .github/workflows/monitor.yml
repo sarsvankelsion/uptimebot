@@ -41,7 +41,7 @@ jobs:
             node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
             [ "$i" -lt 10 ] && echo "Sleeping 25s..." && sleep 25
           done
-          echo "Done"
+          echo "All cycles done"
 
       - name: Commit state
         run: |
