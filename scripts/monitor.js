@@ -7,24 +7,34 @@ const MONITORS = JSON.parse(process.env.MONITORS_JSON || '[]');
 const SLOW_THRESHOLD = 5000;
 const TIMEOUT = 10000;
 const COLORS = { UP: 0x57F287, DOWN: 0xED4245, SLOW: 0xFEE75C, WARN: 0xFFA500 };
+const CYCLE_SLEEP = 30000; // 30s between cycles
+const MAX_CYCLES = 9; // 9 cycles × ~33s = ~5 min (fits 5-min cron window)
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function main() {
   if (!WEBHOOK_URL) { console.error('Missing WEBHOOK_URL'); process.exit(1); }
   if (!MONITORS.length) { console.error('Missing MONITORS_JSON'); process.exit(1); }
 
-  const prevState = loadState();
-  const newState = {};
+  const state = loadState();
 
-  for (const spec of MONITORS) {
-    try {
-      const result = await checkOne(spec, prevState[spec.name]);
-      newState[spec.name] = result;
-    } catch (err) {
-      console.error(`[${spec.name}] Error:`, err.message);
+  for (let cycle = 1; cycle <= MAX_CYCLES; cycle++) {
+    console.log(`=== Cycle ${cycle}/${MAX_CYCLES} ===`);
+    for (const spec of MONITORS) {
+      try {
+        state[spec.name] = await checkOne(spec, state[spec.name]);
+      } catch (err) {
+        console.error(`[${spec.name}] Error:`, err.message);
+      }
+    }
+    if (cycle < MAX_CYCLES) {
+      console.log(`Sleeping 30s...`);
+      await sleep(CYCLE_SLEEP);
     }
   }
 
-  saveState(newState);
+  saveState(state);
+  console.log('All cycles done');
 }
 
 async function checkOne(spec, prev) {
@@ -46,9 +56,10 @@ async function checkOne(spec, prev) {
   const now = Date.now();
   const current = { status, latency: result.latency || 0, error: result.error || null, checkedAt: now };
 
-  if (status === 'DOWN' || status === 'SSL_EXPIRING') {
-    if (prevStatus !== 'DOWN' && prevStatus !== 'SSL_EXPIRING') current.downtimeStart = now;
-    else current.downtimeStart = prev?.downtimeStart || now;
+  if ((status === 'DOWN' || status === 'SSL_EXPIRING') && prevStatus !== 'DOWN' && prevStatus !== 'SSL_EXPIRING') {
+    current.downtimeStart = now;
+  } else if (prev?.downtimeStart) {
+    current.downtimeStart = prev.downtimeStart;
   }
   if (status === 'UP' && (prevStatus === 'DOWN' || prevStatus === 'SSL_EXPIRING' || prevStatus === 'KEYWORD_MISSING')) {
     if (prev?.downtimeStart) current.lastDowntime = formatDuration(now - prev.downtimeStart);

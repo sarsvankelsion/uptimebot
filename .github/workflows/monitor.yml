@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '* * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -38,11 +38,7 @@ jobs:
           ls -la
           echo "Node version:"
           node --version
-          for i in 1 2; do
-            echo "=== Cycle $i ==="
-            node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
-            [ "$i" -lt 2 ] && echo "Sleeping 30s..." && sleep 30
-          done
+          node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
           echo "All cycles done"
 
       - name: Commit state
