@@ -5,16 +5,18 @@ on:
   repository_dispatch:
     types: [trigger]
 
+permissions:
+  contents: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - run: |
-          git init --initial-branch=main
-          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git fetch origin main
-          git reset --hard origin/main
-          git branch --set-upstream-to=origin/main main
           git config user.name "uptimebot"
           git config user.email "uptimebot@users.noreply.github.com"
 
@@ -31,15 +33,13 @@ jobs:
           node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
 
       - name: Commit state
-        env:
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add state.json
           if git diff --staged --quiet; then
             echo "No changes"
           else
             git commit -m "update state [skip ci]"
-            git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }} HEAD:main
+            git push
           fi
 
       - name: Trigger next run
