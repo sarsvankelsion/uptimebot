@@ -56,6 +56,7 @@ tr:hover td{background:#1c2333}
 <div class="nav-links">
 <button id="sBtn" class="active" onclick="page('status')">Status</button>
 <button id="lBtn" class="hide" onclick="page('logs')">Logs</button>
+<button id="sBtn2" class="hide" onclick="page('settings')">Settings</button>
 <button id="aBtn" class="hide" onclick="page('admin')">Admin</button>
 <button id="loBtn" class="hide" onclick="logout()">Logout</button>
 <button id="liBtn" onclick="page('login')">Login</button>
@@ -65,7 +66,7 @@ tr:hover td{background:#1c2333}
 
 <script>
 const R='sarsvankelsion/uptimebot',W=`https://raw.githubusercontent.com/${R}/main`,A=`https://api.github.com/repos/${R}`;
-let M=[],S={},T=sessionStorage.getItem('t')||'',L=[],logsLoaded=false;
+let M=[],S={},Cfg={},T=sessionStorage.getItem('t')||'',L=[],logsLoaded=false;
 
 async function loadData(){
   try{
@@ -74,6 +75,10 @@ async function loadData(){
     if(T){let d=await r.json();M=JSON.parse(atob(d.content));}
     else M=await r.json();
     let s=await fetch(W+'/state.json');S=await s.json();
+    if(T){
+      let c=await fetch(A+'/contents/config.json?cache='+Date.now(),{headers:{Authorization:'bearer '+T}});
+      let cd=await c.json();Cfg=JSON.parse(atob(cd.content));
+    }
   }catch(e){console.error(e)}
 }
 async function loadLogs(){
@@ -88,13 +93,15 @@ async function loadLogs(){
 
 function page(p){
   document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
-  ['sBtn','lBtn','aBtn','liBtn','loBtn'].forEach(id=>{
+  ['sBtn','lBtn','sBtn2','aBtn','liBtn','loBtn'].forEach(id=>{
     let el=document.getElementById(id);
     if(id==='sBtn'&&p==='status')el.classList.add('active');
     else if(id==='lBtn'&&p==='logs')el.classList.add('active');
+    else if(id==='sBtn2'&&p==='settings')el.classList.add('active');
     else if(id==='aBtn'&&p==='admin')el.classList.add('active');
   });
   if(p==='status')renderStatus();
+  else if(p==='settings')renderSettings();
   else if(p==='logs')renderLogs();
   else if(p==='login')renderLogin();
   else if(p==='admin')renderAdmin();
@@ -133,6 +140,7 @@ function doLogin(){
   T=document.getElementById('pw').value;
   if(T.length<10)return document.getElementById('lerr').textContent='Token too short';
   sessionStorage.setItem('t',T);
+  document.getElementById('sBtn2').classList.remove('hide');
   document.getElementById('aBtn').classList.remove('hide');
   document.getElementById('lBtn').classList.remove('hide');
   document.getElementById('loBtn').classList.remove('hide');
@@ -142,6 +150,7 @@ function doLogin(){
 
 function logout(){
   T='';sessionStorage.removeItem('t');
+  document.getElementById('sBtn2').classList.add('hide');
   document.getElementById('aBtn').classList.add('hide');
   document.getElementById('lBtn').classList.add('hide');
   document.getElementById('loBtn').classList.add('hide');
@@ -173,6 +182,38 @@ function editMon(i){
 }
 function syncFromRepo(){
   loadData().then(()=>{renderAdmin();document.getElementById('amsg').textContent='Synced!';document.getElementById('amsg').className='msg ok';});
+}
+
+function renderSettings(){
+  if(!T)return page('login');
+  document.getElementById('main').innerHTML=
+    `<h1>Settings</h1><p class="sub">Discord webhook &amp; config</p>
+    <div id="smsg" class="msg"></div>
+    <div class="card" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="font-weight:600">Discord Webhook URL</div>
+      <input id="swh" class="wrap-input" style="padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.9rem" value="${esc(Cfg.webhookUrl||'')}" placeholder="https://discord.com/api/webhooks/..." />
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-sm" onclick="saveSettings()">Save</button>
+      </div>
+      <div style="font-size:.8rem;color:#8b949e">The webhook URL is saved to <code>config.json</code> in the repo. The workflow reads it automatically.</div>
+    </div>`;
+}
+async function saveSettings(){
+  let wh=document.getElementById('swh').value.trim();
+  Cfg.webhookUrl=wh;
+  try{
+    let r=await fetch(A+'/contents/config.json',{headers:{Authorization:'bearer '+T}});
+    let d=await r.json();
+    let content=btoa(unescape(encodeURIComponent(JSON.stringify(Cfg,null,2)+'\n')));
+    let res=await fetch(A+'/contents/config.json',{
+      method:'PUT',
+      headers:{Authorization:'bearer '+T,'Content-Type':'application/json'},
+      body:JSON.stringify({message:'dashboard: update config',content,sha:d.sha})
+    });
+    if(res.status===409){document.getElementById('smsg').textContent='Conflict, retrying...';return setTimeout(saveSettings,500);}
+    if(!res.ok){let e=await res.json();throw new Error(e.message);}
+    document.getElementById('smsg').textContent='Saved!';document.getElementById('smsg').className='msg ok';
+  }catch(e){document.getElementById('smsg').textContent='Error: '+e.message;document.getElementById('smsg').className='msg err';}
 }
 
 let _formMsg;
@@ -239,7 +280,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 // Init
 _editIdx=-1;
 if(T){
-  ['aBtn','lBtn','loBtn'].forEach(id=>document.getElementById(id).classList.remove('hide'));
+  ['sBtn2','aBtn','lBtn','loBtn'].forEach(id=>document.getElementById(id).classList.remove('hide'));
   document.getElementById('liBtn').classList.add('hide');
   loadLogs();
 }

@@ -29,8 +29,10 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
+          WH="${WEBHOOK_URL:-$(jq -r '.webhookUrl // ""' config.json)}"
+          [ -z "$WH" ] && echo "No webhook URL" && exit 0
           MONITORS=$(jq -r '[.[].name] | join(", ")' monitors.json)
-          curl -s -X POST "$WEBHOOK_URL" \
+          curl -s -X POST "$WH" \
             -H "Content-Type: application/json" \
             -d "{\"embeds\":[{\"title\":\"🔄 Monitor Started\",\"color\":3447003,\"fields\":[{\"name\":\"Monitors\",\"value\":\"$MONITORS\",\"inline\":false}],\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}]}"
 
@@ -38,6 +40,7 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
+          export WEBHOOK_URL="${WEBHOOK_URL:-$(jq -r '.webhookUrl // ""' config.json)}"
           node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
 
       - name: Commit state
