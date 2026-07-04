@@ -95,7 +95,6 @@ function page(p){
   else if(p==='logs')renderLogs();
   else if(p==='login')renderLogin();
   else if(p==='admin')renderAdmin();
-  else if(p==='form')renderForm();
 }
 
 function renderStatus(){
@@ -129,13 +128,13 @@ function renderLogin(){
 }
 function doLogin(){
   T=document.getElementById('pw').value;
-  if(!T.startsWith('ghp_')&&!T.startsWith('github_pat_'))return document.getElementById('lerr').textContent='Invalid token format';
+  if(T.length<10)return document.getElementById('lerr').textContent='Token too short';
   sessionStorage.setItem('t',T);
   document.getElementById('aBtn').classList.remove('hide');
   document.getElementById('lBtn').classList.remove('hide');
   document.getElementById('loBtn').classList.remove('hide');
   document.getElementById('liBtn').classList.add('hide');
-  loadLogs().then(()=>page('admin'));
+  page('admin');
 }
 
 function logout(){
@@ -150,7 +149,7 @@ function logout(){
 function renderAdmin(){
   if(!T)return page('login');
   document.getElementById('main').innerHTML=
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>Admin</h2><button class="btn btn-sm" onclick="page('form')">+ Add</button></div>
+    `    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2>Admin</h2><button class="btn btn-sm" onclick="addMon()">+ Add</button></div>
     <div id="amsg" class="msg"></div>
     <table><thead><tr><th>Name</th><th>URL</th><th>Type</th><th>Status</th><th></th></tr></thead>
     <tbody>${M.map((m,i)=>{
@@ -163,6 +162,7 @@ function renderAdmin(){
     </div>`;
 }
 
+function addMon(){window._editIdx=-1;document.getElementById('main').innerHTML=getFormHTML('','','http','');}
 function editMon(i){
   window._editIdx=i;
   let m=M[i];
@@ -180,16 +180,12 @@ function getFormHTML(n,u,t,k){
   <div id="fmsg" class="msg"></div>
   <div class="wrap-input"><input id="fn" value="${esc(n)}" placeholder="Name (e.g. My API)" /></div>
   <div class="wrap-input"><input id="fu" value="${esc(u)}" placeholder="URL (e.g. https://...)" /></div>
-  <div class="wrap-input"><select id="ft"><option ${t==='http'?'selected':''}>http</option><option ${t==='keyword'?'selected':''}>keyword</option><option ${t==='ssl'?'selected':''}>ssl</option></select></div>
+  <div class="wrap-input"><select id="ft" onchange="document.getElementById('fkd').style.display=this.value==='keyword'?'':'none'"><option ${t==='http'?'selected':''}>http</option><option ${t==='keyword'?'selected':''}>keyword</option><option ${t==='ssl'?'selected':''}>ssl</option></select></div>
   <div class="wrap-input" id="fkd" style="display:${t==='keyword'?'':'none'}"><input id="fk" value="${esc(kw)}" placeholder="Keyword to find in body" /></div>
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
     <button class="btn btn-sm" onclick="page('admin')">Cancel</button>
     <button class="btn" onclick="saveMon()">${_editIdx>=0?'Update':'Create'}</button>
   </div></div>`;
-  setTimeout(()=>{
-    let el=document.getElementById('ft');
-    if(el)el.onchange=()=>{document.getElementById('fkd').style.display=document.getElementById('ft').value==='keyword'?'':'none';};
-  },0);
 }
 
 async function saveMon(){
