@@ -69,6 +69,7 @@ tr:hover td{background:rgba(255,255,255,0.03)}
 <span class="brand">📡 UptimeBot</span>
 <div class="nav-links">
 <button id="sBtn" class="active" onclick="page('status')">Status</button>
+<button id="mBtn" class="hide" onclick="page('monitor')">Monitor</button>
 <button id="lBtn" class="hide" onclick="page('logs')">Logs</button>
 <button id="sBtn2" class="hide" onclick="page('settings')">Settings</button>
 <button id="aBtn" class="hide" onclick="page('admin')">Admin</button>
@@ -109,14 +110,16 @@ async function loadLogs(){
 
 function page(p){
   document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
-  ['sBtn','lBtn','sBtn2','aBtn','liBtn','loBtn'].forEach(id=>{
+  ['sBtn','mBtn','lBtn','sBtn2','aBtn','liBtn','loBtn'].forEach(id=>{
     let el=document.getElementById(id);
     if(id==='sBtn'&&p==='status')el.classList.add('active');
+    else if(id==='mBtn'&&p==='monitor')el.classList.add('active');
     else if(id==='lBtn'&&p==='logs')el.classList.add('active');
     else if(id==='sBtn2'&&p==='settings')el.classList.add('active');
     else if(id==='aBtn'&&p==='admin')el.classList.add('active');
   });
   if(p==='status')renderStatus();
+  else if(p==='monitor')renderMonitor();
   else if(p==='settings')renderSettings();
   else if(p==='logs')renderLogs();
   else if(p==='login')renderLogin();
@@ -153,9 +156,57 @@ function renderLogs(){
     ${L.length?L.map(x=>{
       let c=x.c==='success'?'#3fb950':x.c==='failure'?'#f85149':'#d29922';
       let url=`https://github.com/sarsvankelsion/uptimebot/actions/runs/${x.id}`;
-      return `<div class="log-entry"><span><a href="${url}" target="_blank" style="color:#58a6ff;text-decoration:none">#${x.n}</a> ${x.w} — <span class="lg-s" style="color:${c}">${x.c||x.s}</span></span><span style="color:#8b949e">${new Date(x.t).toLocaleString()}</span></div>`;
+      return `<div class="log-entry"><span><a href="${url}" target="_blank">#${x.n}</a> ${x.w} — <span class="lg-s" style="color:${c}">${x.c||x.s}</span></span><span style="color:rgba(255,255,255,0.35)">${new Date(x.t).toLocaleString()}</span></div>`;
     }).join(''):'<p style="color:#8b949e">No logs loaded</p>'}
     <button class="btn btn-sm" style="margin-top:12px" onclick="loadLogs().then(()=>renderLogs())">Refresh</button>`;
+}
+
+function renderMonitor(){
+  if(!T)return page('login');
+  const ts=Date.now();
+  document.getElementById('main').innerHTML=
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div><h1>Monitor Details</h1><p class="sub">Detailed check results for each monitor</p></div>
+      <button class="btn btn-sm" onclick="triggerWorkflow()" id="trigBtn">▶ Trigger Run</button>
+    </div>
+    ${M.length?M.map(m=>{
+      let s=S[m.name]||{};
+      let c=s.status==='UP'?'up':s.status==='DOWN'?'down':s.status==='SLOW'?'slow':'warn';
+      let ago=s.checkedAt?formatAgo(ts-s.checkedAt):'—';
+      let err=s.error?`<div style="color:#ED4245;font-size:.78rem;margin-top:4px">Error: ${esc(s.error)}</div>`:'';
+      return `<div class="card" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="card-n">${esc(m.name)}</div>
+            <div class="card-u">${esc(m.url)}</div>
+          </div>
+          <div class="badge ${c}"><span class="dot"></span>${s.status||'Waiting'}</div>
+        </div>
+        <div style="display:flex;gap:20px;font-size:.78rem;color:rgba(255,255,255,0.4);flex-wrap:wrap">
+          <span>Type: ${m.type}</span>
+          <span>Latency: ${s.latency||'—'}ms</span>
+          <span>Last check: ${ago} ago</span>
+          ${m.type==='keyword'?`<span>Keyword: ${esc(m.keyword||'—')}</span>`:''}
+          ${m.type==='ssl'&&s.daysLeft!==undefined?`<span>SSL: ${s.daysLeft} days left</span>`:''}
+        </div>
+        ${err}
+      </div>`;
+    }).join(''):'<p style="color:rgba(255,255,255,0.3)">No monitors configured</p>'}
+    <button class="btn btn-sm" style="margin-top:12px" onclick="loadData().then(()=>renderMonitor())">🔄 Refresh</button>`;
+}
+
+async function triggerWorkflow(){
+  let btn=document.getElementById('trigBtn');
+  if(btn){btn.textContent='⏳ Triggering...';btn.disabled=true;}
+  try{
+    let r=await fetch(A+'/dispatches',{
+      method:'POST',
+      headers:{Authorization:'bearer '+T,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+      body:JSON.stringify({event_type:'trigger'})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    if(btn){btn.textContent='✅ Triggered!';setTimeout(()=>{btn.textContent='▶ Trigger Run';btn.disabled=false;},2000);}
+  }catch(e){if(btn){btn.textContent='❌ Failed';setTimeout(()=>{btn.textContent='▶ Trigger Run';btn.disabled=false;},2000);}}
 }
 
 function renderLogin(){
@@ -165,6 +216,7 @@ function doLogin(){
   T=document.getElementById('pw').value;
   if(T.length<10)return document.getElementById('lerr').textContent='Token too short';
   sessionStorage.setItem('t',T);
+  document.getElementById('mBtn').classList.remove('hide');
   document.getElementById('sBtn2').classList.remove('hide');
   document.getElementById('aBtn').classList.remove('hide');
   document.getElementById('lBtn').classList.remove('hide');
@@ -175,6 +227,7 @@ function doLogin(){
 
 function logout(){
   T='';sessionStorage.removeItem('t');
+  document.getElementById('mBtn').classList.add('hide');
   document.getElementById('sBtn2').classList.add('hide');
   document.getElementById('aBtn').classList.add('hide');
   document.getElementById('lBtn').classList.add('hide');
@@ -305,7 +358,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 // Init
 _editIdx=-1;
 if(T){
-  ['sBtn2','aBtn','lBtn','loBtn'].forEach(id=>document.getElementById(id).classList.remove('hide'));
+  ['mBtn','sBtn2','aBtn','lBtn','loBtn'].forEach(id=>document.getElementById(id).classList.remove('hide'));
   document.getElementById('liBtn').classList.add('hide');
   loadLogs();
 }
