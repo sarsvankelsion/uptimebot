@@ -76,8 +76,10 @@ async function loadData(){
     else M=await r.json();
     let s=await fetch(W+'/state.json');S=await s.json();
     if(T){
-      let c=await fetch(A+'/contents/config.json?cache='+Date.now(),{headers:{Authorization:'bearer '+T}});
-      let cd=await c.json();Cfg=JSON.parse(atob(cd.content));
+      try{
+        let c=await fetch(W+'/config.json?cache='+Date.now());
+        Cfg=await c.json();
+      }catch(e){console.error('cfg err',e)}
     }
   }catch(e){console.error(e)}
 }
