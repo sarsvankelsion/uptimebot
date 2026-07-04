@@ -1,9 +1,9 @@
 {
   "DQCasio": {
     "status": "UP",
-    "latency": 105,
+    "latency": 291,
     "error": null,
-    "checkedAt": 1783139683429
+    "checkedAt": 1783139940569
   },
   "Example": {
     "status": "UP",
