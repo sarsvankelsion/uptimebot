@@ -193,7 +193,7 @@ function renderSettings(){
     <div id="smsg" class="msg"></div>
     <div class="card" style="flex-direction:column;align-items:stretch;gap:10px">
       <div style="font-weight:600">Discord Webhook URL</div>
-      <input id="swh" class="wrap-input" style="padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.9rem" value="${esc(Cfg.webhookUrl||'')}" placeholder="https://discord.com/api/webhooks/..." />
+      <input id="swh" style="width:100%;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.9rem" value="${esc(Cfg.webhookUrl||'')}" placeholder="https://discord.com/api/webhooks/..." />
       <div style="display:flex;gap:10px">
         <button class="btn btn-sm" onclick="saveSettings()">Save</button>
       </div>
