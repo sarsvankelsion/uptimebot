@@ -2,55 +2,69 @@
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UptimeBot</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
-.nav{background:#161b22;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:100}
-.nav-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px}
-.nav-in .brand{font-weight:700}
-.nav-links{display:flex;gap:6px}
-.nav-links button{background:none;border:none;color:#8b949e;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.9rem}
-.nav-links button:hover,.nav-links .active{background:#1c2333;color:#e6edf3}
-.main{max-width:1100px;margin:0 auto;padding:28px 20px}
-h1{font-size:1.6rem;margin-bottom:6px}
-.sub{color:#8b949e;margin-bottom:20px}
-.sums{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
-.sum{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 22px;flex:1;min-width:100px;text-align:center}
-.sum .num{font-size:1.6rem;font-weight:700}
-.sum .lbl{font-size:.8rem;color:#8b949e;margin-top:4px}
-.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.card-n{font-weight:600;margin-bottom:3px}
-.card-u{font-size:.8rem;color:#8b949e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
-.card-m{font-size:.78rem;color:#8b949e;margin-top:5px}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.8rem;font-weight:600}
-.badge .dot{width:7px;height:7px;border-radius:50%}
-.badge.up{background:rgba(63,185,80,0.15);color:#3fb950}.badge.up .dot{background:#3fb950}
-.badge.down{background:rgba(248,81,73,0.15);color:#f85149}.badge.down .dot{background:#f85149}
-.badge.slow{background:rgba(210,153,34,0.15);color:#d29922}.badge.slow .dot{background:#d29922}
-.badge.warn{background:rgba(212,118,14,0.15);color:#d4760e}.badge.warn .dot{background:#d4760e}
+*{box-sizing:border-box;margin:0;padding:0;cursor:none!important}
+body{font-family:'JetBrains Mono',monospace;background:#030303;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:-3}
+#cursor-dot,#cursor-ring{position:fixed;top:0;left:0;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:999999}
+#cursor-dot{width:6px;height:6px;background:#fff;box-shadow:0 0 10px #fff}
+#cursor-ring{width:34px;height:34px;border:1px solid rgba(255,255,255,0.5);transition:width .15s,height .15s}
+.hovering #cursor-ring{width:50px;height:50px;background:rgba(255,255,255,0.05);border-color:#fff}
+.nav{background:rgba(3,3,3,0.8);border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:100;backdrop-filter:blur(15px)}
+.nav-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px}
+.nav-in .brand{font-weight:800;letter-spacing:1px;font-size:1rem;color:#fff}
+.nav-links{display:flex;gap:4px}
+.nav-links button{background:none;border:1px solid transparent;color:rgba(255,255,255,0.5);padding:6px 14px;border-radius:8px;cursor:none;font-size:.85rem;font-family:inherit;transition:all .3s}
+.nav-links button:hover,.nav-links .active{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.15);text-shadow:0 0 15px rgba(255,255,255,0.5)}
+.main{max-width:1100px;margin:0 auto;padding:32px 24px}
+h1{font-size:1.5rem;margin-bottom:6px;color:#fff;letter-spacing:1px}
+.sub{color:rgba(255,255,255,0.4);margin-bottom:24px;font-size:.85rem}
+.sums{display:flex;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+.sum{background:rgba(15,15,20,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:18px 24px;flex:1;min-width:100px;text-align:center;backdrop-filter:blur(10px);transition:.3s}
+.sum:hover{border-color:rgba(255,255,255,0.2);transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,0.5)}
+.sum .num{font-size:1.8rem;font-weight:800;color:#fff}
+.sum .lbl{font-size:.75rem;color:rgba(255,255,255,0.4);margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+.card{background:rgba(15,15,20,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;backdrop-filter:blur(10px);transition:.3s}
+.card:hover{border-color:rgba(255,255,255,0.2);transform:scale(1.01) translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,0.5),inset 0 0 15px rgba(255,255,255,0.03)}
+.card-n{font-weight:700;margin-bottom:3px;color:#fff;letter-spacing:.5px}
+.card-u{font-size:.78rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
+.card-m{font-size:.75rem;color:rgba(255,255,255,0.35);margin-top:5px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;letter-spacing:.5px}
+.badge .dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.badge.up{background:rgba(87,242,135,0.12);color:#57F287}.badge.up .dot{background:#57F287}
+.badge.down{background:rgba(237,66,69,0.12);color:#ED4245}.badge.down .dot{background:#ED4245}
+.badge.slow{background:rgba(254,231,92,0.12);color:#FEE75C}.badge.slow .dot{background:#FEE75C}
+.badge.warn{background:rgba(255,165,0,0.12);color:#FFA500}.badge.warn .dot{background:#FFA500}
 table{width:100%;border-collapse:collapse;margin-top:8px}
-th{text-align:left;padding:10px 8px;font-size:.78rem;color:#8b949e;border-bottom:1px solid #30363d;text-transform:uppercase}
-td{padding:10px 8px;border-bottom:1px solid #30363d;font-size:.88rem;vertical-align:middle}
-tr:hover td{background:#1c2333}
+th{text-align:left;padding:12px 10px;font-size:.72rem;color:rgba(255,255,255,0.35);border-bottom:1px solid rgba(255,255,255,0.08);text-transform:uppercase;letter-spacing:1.5px}
+td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.85rem;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,0.03)}
 .wrap-input{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.wrap-input input,.wrap-input select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:.9rem;flex:1;min-width:120px}
-.btn{padding:8px 16px;border:none;border-radius:8px;background:#58a6ff;color:#fff;font-weight:600;cursor:pointer;display:inline-block}
-.btn:hover{opacity:.85}
-.btn-r{background:#f85149}
-.btn-sm{padding:5px 10px;font-size:.8rem}
+.wrap-input input,.wrap-input select{background:rgba(15,15,20,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;color:#e2e8f0;font-size:.88rem;font-family:inherit;flex:1;min-width:120px;transition:.3s}
+.wrap-input input:focus,.wrap-input select:focus{outline:none;border-color:rgba(255,255,255,0.3);box-shadow:0 0 15px rgba(255,255,255,0.08)}
+.btn{padding:8px 18px;border:none;border-radius:8px;background:#fff;color:#030303;font-weight:700;cursor:none;font-family:inherit;font-size:.85rem;transition:.3s}
+.btn:hover{box-shadow:0 0 20px rgba(255,255,255,0.4);transform:translateY(-2px)}
+.btn-r{background:rgba(237,66,69,0.9);color:#fff}
+.btn-r:hover{box-shadow:0 0 20px rgba(237,66,69,0.4)}
+.btn-sm{padding:5px 12px;font-size:.78rem}
 .hide{display:none!important}
-.box{max-width:500px;margin:60px auto;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:32px;text-align:center}
-.box h2{margin-bottom:16px}
-.box input{width:100%;padding:8px 12px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#e6edf3;margin-top:10px}
-.msg{padding:8px 14px;border-radius:8px;margin-bottom:12px;font-size:.85rem;display:none}
-.msg.ok{display:block;background:rgba(63,185,80,0.15);color:#3fb950}
-.msg.err{display:block;background:rgba(248,81,73,0.15);color:#f85149}
-.log-entry{padding:6px 0;border-bottom:1px solid #30363d;font-size:.82rem;display:flex;justify-content:space-between}
-.log-entry .lg-s{font-weight:600}
-.footer{text-align:center;padding:16px;color:#8b949e;font-size:.78rem;border-top:1px solid #30363d;margin-top:30px}
+.box{max-width:500px;margin:60px auto;background:rgba(15,15,20,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:36px;text-align:center;backdrop-filter:blur(10px)}
+.box h2{margin-bottom:16px;color:#fff;font-size:1.2rem;letter-spacing:1px}
+.box input{width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(15,15,20,0.6);color:#e2e8f0;margin-top:12px;font-family:inherit}
+.msg{padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:.82rem;display:none}
+.msg.ok{display:block;background:rgba(87,242,135,0.1);color:#57F287}
+.msg.err{display:block;background:rgba(237,66,69,0.1);color:#ED4245}
+.log-entry{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.8rem;display:flex;justify-content:space-between}
+.log-entry .lg-s{font-weight:700}
+.log-entry a{color:#58a6ff;text-decoration:none;transition:.3s}
+.log-entry a:hover{text-shadow:0 0 10px rgba(88,166,255,0.5)}
+.footer{text-align:center;padding:20px;color:rgba(255,255,255,0.25);font-size:.75rem;border-top:1px solid rgba(255,255,255,0.05);margin-top:40px;letter-spacing:1px}
 @media(max-width:600px){.card{flex-direction:column;align-items:stretch;gap:8px}}
 </style></head>
 <body>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
 <div class="nav"><div class="nav-in">
 <span class="brand">📡 UptimeBot</span>
 <div class="nav-links">
@@ -301,4 +315,16 @@ setInterval(()=>{
   if(active&&active.id==='sBtn')loadData().then(()=>renderStatus());
   else if(active&&active.id==='aBtn'&&_editIdx<0)loadData().then(()=>renderAdmin());
 },15000);
+
+// Custom cursor
+const cDot=document.getElementById('cursor-dot'),cRing=document.getElementById('cursor-ring');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cDot.style.left=mx+'px';cDot.style.top=my+'px'});
+document.addEventListener('mousedown',()=>{cRing.style.width='20px';cRing.style.height='20px'});
+document.addEventListener('mouseup',()=>{cRing.style.width='34px';cRing.style.height='34px'});
+function lerp(a,b,t){return a+(b-a)*t}
+(function anim(){rx=lerp(rx,mx,.15);ry=lerp(ry,my,.15);cRing.style.left=rx+'px';cRing.style.top=ry+'px';requestAnimationFrame(anim)})();
+// Hover effect
+document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,.card,.sum,.log-entry,.social-btn'))document.body.classList.add('hovering')});
+document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,.card,.sum,.log-entry,.social-btn'))document.body.classList.remove('hovering')});
 </script></body></html>
