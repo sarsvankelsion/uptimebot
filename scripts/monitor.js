@@ -36,6 +36,7 @@ async function main() {
     }
   }
 
+  await sendSummary(state);
   saveState(state);
   console.log('All cycles done');
 }
@@ -120,21 +121,58 @@ async function sendDiscord(embed) {
 function buildEmbed(name, url, prev, status, data, spec) {
   const ts = new Date().toISOString();
   const f = (n, v, i = true) => ({ name: n, value: String(v), inline: i });
+  const typeEmoji = { http: '🌐', keyword: '🔑', ssl: '🔒' };
+  const emoji = typeEmoji[spec.type] || '📡';
 
   if (status === 'UP') {
-    return { title: `${name} is UP`, color: COLORS.UP, description: prev === 'DOWN' ? `Back online! Downtime: ${data.lastDowntime || 'unknown'}` : 'Service is UP', fields: [f('URL', url, false), f('Latency', `${data.latency}ms`), f('Previous', prev)], timestamp: ts };
+    const desc = prev === 'DOWN' || prev === 'SSL_EXPIRING' || prev === 'KEYWORD_MISSING'
+      ? `✅ Back online! Was down for ${data.lastDowntime || 'unknown'}`
+      : 'Service is operational';
+    return { title: `${emoji} ${name} — UP`, color: COLORS.UP, description: desc, fields: [
+      f('URL', url, false),
+      f('Type', spec.type, true),
+      f('Latency', `${data.latency}ms`, true),
+      f('Previous Status', prev, true),
+      f('Checked At', `<t:${Math.floor(Date.now()/1000)}:R>`, true)
+    ], timestamp: ts };
   }
   if (status === 'DOWN') {
-    return { title: `${name} is DOWN`, color: COLORS.DOWN, description: 'Service unreachable', fields: [f('URL', url, false), f('Error', data.error), f('Latency', `${data.latency}ms`)], timestamp: ts };
+    return { title: `${emoji} ${name} — DOWN`, color: COLORS.DOWN, description: '❌ Service unreachable', fields: [
+      f('URL', url, false),
+      f('Type', spec.type, true),
+      f('Error', data.error || 'Unknown', true),
+      f('Latency', `${data.latency}ms`, true),
+      f('Previous Status', prev, true),
+      f('Checked At', `<t:${Math.floor(Date.now()/1000)}:R>`, true)
+    ], timestamp: ts };
   }
   if (status === 'SLOW') {
-    return { title: `${name} is SLOW`, color: COLORS.SLOW, description: `${data.latency}ms > ${SLOW_THRESHOLD}ms`, fields: [f('URL', url, false), f('Latency', `${data.latency}ms`), f('Threshold', `${SLOW_THRESHOLD}ms`)], timestamp: ts };
+    return { title: `${emoji} ${name} — SLOW`, color: COLORS.SLOW, description: `⚠️ Response too slow`, fields: [
+      f('URL', url, false),
+      f('Type', spec.type, true),
+      f('Latency', `${data.latency}ms`, true),
+      f('Threshold', `${SLOW_THRESHOLD}ms`, true),
+      f('Previous Status', prev, true),
+      f('Checked At', `<t:${Math.floor(Date.now()/1000)}:R>`, true)
+    ], timestamp: ts };
   }
   if (status === 'KEYWORD_MISSING') {
-    return { title: `${name} — Keyword Missing`, color: COLORS.WARN, description: `"${spec.keyword}" not found`, fields: [f('URL', url, false), f('Keyword', spec.keyword)], timestamp: ts };
+    return { title: `${emoji} ${name} — Keyword Missing`, color: COLORS.WARN, description: `⚠️ Keyword not found in response`, fields: [
+      f('URL', url, false),
+      f('Type', 'keyword', true),
+      f('Keyword', `\`${spec.keyword}\``, true),
+      f('Previous Status', prev, true),
+      f('Checked At', `<t:${Math.floor(Date.now()/1000)}:R>`, true)
+    ], timestamp: ts };
   }
   if (status === 'SSL_EXPIRING') {
-    return { title: `${name} — SSL Expiring`, color: COLORS.WARN, description: 'Certificate expires soon', fields: [f('URL', url, false), f('Days Left', `${data.daysLeft}`)], timestamp: ts };
+    return { title: `${emoji} ${name} — SSL Expiring`, color: COLORS.WARN, description: `⚠️ Certificate expires soon`, fields: [
+      f('URL', url, false),
+      f('Type', 'ssl', true),
+      f('Days Left', `${data.daysLeft}`, true),
+      f('Previous Status', prev, true),
+      f('Checked At', `<t:${Math.floor(Date.now()/1000)}:R>`, true)
+    ], timestamp: ts };
   }
   return null;
 }
@@ -152,6 +190,31 @@ function formatDuration(ms) {
   if (ms < 60000) return `${Math.round(ms / 1000)}s`;
   const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
   return `${m}m ${s}s`;
+}
+
+async function sendSummary(state) {
+  const up = [], down = [], slow = [], other = [];
+  for (const [name, s] of Object.entries(state)) {
+    const line = `• **${name}** — ${s.status} (${s.latency}ms)`;
+    if (s.status === 'UP') up.push(line);
+    else if (s.status === 'DOWN') down.push(line);
+    else if (s.status === 'SLOW') slow.push(line);
+    else other.push(line);
+  }
+  const fields = [];
+  if (up.length) fields.push({ name: `✅ UP (${up.length})`, value: up.join('\n'), inline: false });
+  if (down.length) fields.push({ name: `❌ DOWN (${down.length})`, value: down.join('\n'), inline: false });
+  if (slow.length) fields.push({ name: `⚠️ SLOW (${slow.length})`, value: slow.join('\n'), inline: false });
+  if (other.length) fields.push({ name: `🔶 Issues (${other.length})`, value: other.join('\n'), inline: false });
+  if (!fields.length) return;
+
+  const embed = {
+    title: '📊 Monitoring Summary',
+    color: down.length ? COLORS.DOWN : (slow.length || other.length ? COLORS.WARN : COLORS.UP),
+    fields,
+    timestamp: new Date().toISOString()
+  };
+  await sendDiscord(embed);
 }
 
 main().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); });

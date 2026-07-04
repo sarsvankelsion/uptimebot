@@ -30,10 +30,12 @@ jobs:
           WH=$(jq -r '.webhookUrl // ""' config.json)
           [ -z "$WH" ] && WH="${{ secrets.WEBHOOK_URL }}"
           [ -z "$WH" ] && echo "No webhook URL" && exit 0
-          MONITORS=$(jq -r '[.[].name] | join(", ")' monitors.json)
+          COUNT=$(jq 'length' monitors.json)
+          NAMES=$(jq -r '.[].name' monitors.json | tr '\n' ', ' | sed 's/,$//')
+          TYPES=$(jq -r '[.[].type] | group_by(.) | map("\(.[0]): \(length)") | join(", ")' monitors.json)
           curl -s -X POST "$WH" \
             -H "Content-Type: application/json" \
-            -d "{\"embeds\":[{\"title\":\"🔄 Monitor Started\",\"color\":3447003,\"fields\":[{\"name\":\"Monitors\",\"value\":\"$MONITORS\",\"inline\":false}],\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}]}"
+            -d "{\"embeds\":[{\"title\":\"🔄 UptimeBot Started\",\"color\":3447003,\"description\":\"Monitoring **$COUNT** services every ~30s\",\"fields\":[{\"name\":\"📋 Monitors\",\"value\":\"$NAMES\",\"inline\":false},{\"name\":\"📊 Types\",\"value\":\"$TYPES\",\"inline\":true},{\"name\":\"⏱ Interval\",\"value\":\"~30 seconds\",\"inline\":true}],\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}]}"
 
       - name: Run monitoring
         run: |
