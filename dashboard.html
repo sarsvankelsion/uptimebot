@@ -69,7 +69,10 @@ let M=[],S={},T=sessionStorage.getItem('t')||'',L=[],logsLoaded=false;
 
 async function loadData(){
   try{
-    let r=await fetch(W+'/monitors.json');M=await r.json();
+    let u=T?A+'/contents/monitors.json?cache='+Date.now():W+'/monitors.json';
+    let r=await fetch(u,T?{headers:{Authorization:'bearer '+T}}:{});
+    if(T){let d=await r.json();M=JSON.parse(atob(d.content));}
+    else M=await r.json();
     let s=await fetch(W+'/state.json');S=await s.json();
   }catch(e){console.error(e)}
 }
@@ -198,15 +201,7 @@ async function saveMon(){
   if(_editIdx>=0)list[_editIdx]={name,url,type,keyword};
   else list.push({name,url,type,keyword});
   try{
-    let r=await fetch(A+'/contents/monitors.json');
-    let d=await r.json();
-    let content=btoa(unescape(encodeURIComponent(JSON.stringify(list,null,2)+'\n')));
-    let res=await fetch(A+'/contents/monitors.json',{
-      method:'PUT',
-      headers:{Authorization:'bearer '+T,'Content-Type':'application/json'},
-      body:JSON.stringify({message:'update monitors via dashboard',content,sha:d.sha})
-    });
-    if(!res.ok){let e=await res.json();throw new Error(e.message||'HTTP '+res.status);}
+    await putMonitors(list,'update'+(_editIdx>=0?'':' add')+' monitor');
     M=list;
     _editIdx=-1;
     document.getElementById('amsg').textContent='Saved!';document.getElementById('amsg').className='msg ok';
@@ -214,19 +209,24 @@ async function saveMon(){
   }catch(e){setFormMsg('Error: '+e.message,'err');}
 }
 
+async function putMonitors(list,msg,retry){
+  let r=await fetch(A+'/contents/monitors.json',{headers:{Authorization:'bearer '+T}});
+  let d=await r.json();
+  let content=btoa(unescape(encodeURIComponent(JSON.stringify(list,null,2)+'\n')));
+  let res=await fetch(A+'/contents/monitors.json',{
+    method:'PUT',
+    headers:{Authorization:'bearer '+T,'Content-Type':'application/json'},
+    body:JSON.stringify({message:'dashboard: '+msg,content,sha:d.sha})
+  });
+  if(res.status===409&&!retry)return putMonitors(list,msg,true);
+  if(!res.ok){let e=await res.json();throw new Error(e.message||'HTTP '+res.status);}
+}
+
 async function delMon(i){
   if(!confirm('Delete "'+M[i].name+'"?'))return;
   let list=M.filter((_,j)=>j!==i);
   try{
-    let r=await fetch(A+'/contents/monitors.json');
-    let d=await r.json();
-    let content=btoa(unescape(encodeURIComponent(JSON.stringify(list,null,2)+'\n')));
-    let res=await fetch(A+'/contents/monitors.json',{
-      method:'PUT',
-      headers:{Authorization:'bearer '+T,'Content-Type':'application/json'},
-      body:JSON.stringify({message:'delete monitor via dashboard',content,sha:d.sha})
-    });
-    if(!res.ok){let e=await res.json();throw new Error(e.message||'HTTP '+res.status);}
+    await putMonitors(list,'delete monitor');
     M=list;
     document.getElementById('amsg').textContent='Deleted!';document.getElementById('amsg').className='msg ok';
     page('admin');
@@ -244,9 +244,9 @@ if(T){
   loadLogs();
 }
 loadData().then(()=>page('status'));
-setInterval(()=>loadData().then(()=>{
+setInterval(()=>{
   let active=document.querySelector('.active');
-  if(active&&active.id==='sBtn')renderStatus();
-  else if(active&&active.id==='aBtn')renderAdmin();
-}),15000);
+  if(active&&active.id==='sBtn')loadData().then(()=>renderStatus());
+  else if(active&&active.id==='aBtn'&&_editIdx<0)loadData().then(()=>renderAdmin());
+},15000);
 </script></body></html>
