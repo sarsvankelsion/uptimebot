@@ -1,0 +1,36 @@
+=== UPTIMEBOT PLAN ===
+
+1. KIẾN TRÚC TỔNG THỂ
+   - GitHub Actions: monitoring backend (check HTTP, SSL, keyword)
+   - GitHub Repo: lưu monitor config (monitors.json) + trạng thái (state.json)
+   - GitHub Pages: Dashboard HTML (status page + admin CRUD)
+   - Discord Webhook: gửi rich embed alerts
+
+2. SCHEDULE
+   - PAT self-trigger: mỗi lần chạy xong tự trigger lần tiếp theo
+   - Script loop 9 cycles x 30s = ~5 phút/lần
+   - Khoảng cách check: ~30 giây
+
+3. FIRESTORE SCHEMA (đã chuyển sang GitHub files)
+   monitors.json : cấu hình monitor (url, type, keyword, name)
+   state.json    : trạng thái tự động cập nhật (status, latency, checkedAt)
+
+4. DASHBOARD (HTML single file)
+   /dashboard.html : status page public + admin CRUD
+   Admin cần PAT GitHub để chỉnh sửa monitors.json
+
+5. DISCORD NOTIFICATIONS
+   - UP    (green)   #57F287
+   - DOWN  (red)     #ED4245
+   - SLOW  (yellow)  #FEE75C
+   - KEYWORD_MISSING, SSL_EXPIRING (orange)
+   - Trigger notification khi workflow start
+
+6. TÍNH NĂNG
+   - HTTP/API monitor: check status code
+   - Slow response alert: > 5000ms
+   - Keyword monitor: check từ khóa trong body
+   - SSL expiry: check cert < 15 ngày
+   - Dashboard: status page + CRUD monitor
+   - Dọn workflow cũ tự động
+   - Hiển thị workflow log trên dashboard (todo)
