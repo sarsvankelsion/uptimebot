@@ -50,8 +50,7 @@ jobs:
             echo "No changes"
           else
             git commit -m "update state [skip ci]"
-            git pull --rebase
-            git push
+            git push --force-with-lease
           fi
 
       - name: Clean old workflow runs
