@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UptimeBot Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+.nav{background:#161b22;border-bottom:1px solid #30363d;position:sticky;top:0}
+.nav-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px}
+.nav-in .brand{font-weight:700}
+.nav-links{display:flex;gap:6px}
+.nav-links button{background:none;border:none;color:#8b949e;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.9rem}
+.nav-links button:hover,button.active{background:#1c2333;color:#e6edf3}
+.main{max-width:1100px;margin:0 auto;padding:28px 20px}
+h1{font-size:1.6rem;margin-bottom:6px}
+.sub{color:#8b949e;margin-bottom:24px}
+.sums{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.sum{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 22px;flex:1;min-width:100px;text-align:center}
+.sum .num{font-size:1.6rem;font-weight:700}
+.sum .lbl{font-size:.8rem;color:#8b949e;margin-top:4px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.card-n{font-weight:600;margin-bottom:3px}
+.card-u{font-size:.8rem;color:#8b949e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
+.card-m{font-size:.78rem;color:#8b949e;margin-top:5px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.8rem;font-weight:600}
+.badge .dot{width:7px;height:7px;border-radius:50%}
+.badge.up{background:rgba(63,185,80,0.15);color:#3fb950}.badge.up .dot{background:#3fb950}
+.badge.down{background:rgba(248,81,73,0.15);color:#f85149}.badge.down .dot{background:#f85149}
+.badge.slow{background:rgba(210,153,34,0.15);color:#d29922}.badge.slow .dot{background:#d29922}
+.badge.warn{background:rgba(212,118,14,0.15);color:#d4760e}.badge.warn .dot{background:#d4760e}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th{text-align:left;padding:10px 8px;font-size:.78rem;color:#8b949e;border-bottom:1px solid #30363d;text-transform:uppercase}
+td{padding:10px 8px;border-bottom:1px solid #30363d;font-size:.88rem;vertical-align:middle}
+tr:hover td{background:#1c2333}
+.in{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.in input,.in select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:.9rem}
+.in input{flex:1;min-width:120px}
+.btn{padding:8px 16px;border:none;border-radius:8px;background:#58a6ff;color:#fff;font-weight:600;cursor:pointer}
+.btn:hover{opacity:.85}
+.btn.danger{background:#f85149}
+.btn.sm{padding:5px 10px;font-size:.8rem}
+.login-box{max-width:400px;margin:80px auto;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:32px;text-align:center}
+.login-box input{width:100%;margin-top:12px;padding:8px 12px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#e6edf3}
+.msg{background:rgba(63,185,80,0.15);color:#3fb950;padding:8px 14px;border-radius:8px;margin-bottom:12px;font-size:.85rem}
+.hide{display:none}
+.footer{text-align:center;padding:16px;color:#8b949e;font-size:.78rem;border-top:1px solid #30363d;margin-top:30px}
+@media(max-width:600px){.card{flex-direction:column;align-items:stretch;gap:8px}}
+</style>
+</head>
+<body>
+<div class="nav"><div class="nav-in">
+<span class="brand">📡 UptimeBot</span>
+<div class="nav-links">
+<button id="btnStatus" class="active" onclick="showPage('status')">Status</button>
+<button id="btnAdmin" class="hide" onclick="showPage('admin')">Admin</button>
+<button onclick="doLogout()" class="hide" id="btnLogout">Logout</button>
+<button onclick="showPage('login')" id="btnLogin">Login</button>
+</div></div></div>
+
+<main class="main" id="main"></main>
+<div class="footer">UptimeBot &mdash; GitHub Actions</div>
+
+<script>
+const REPO = 'sarsvankelsion/uptimebot';
+const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
+const API = `https://api.github.com/repos/${REPO}`;
+let monitors = [], states = {}, token = sessionStorage.getItem('ut') || '';
+
+async function loadData() {
+  try {
+    let [m, s] = await Promise.all([
+      fetch(`${RAW}/monitors.json`).then(r=>r.json()),
+      fetch(`${RAW}/state.json`).then(r=>r.json())
+    ]);
+    monitors = m; states = s;
+  } catch(e) { console.error('load err', e); }
+}
+
+function showPage(p) {
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btnStatus').classList.toggle('active', p==='status');
+  document.getElementById('btnAdmin').classList.toggle('active', p==='admin');
+  if (p==='status') renderStatus();
+  else if (p==='login') renderLogin();
+  else if (p==='admin') renderAdmin();
+}
+
+function renderStatus() {
+  const c = monitors.reduce((a,m)=>{
+    const s=states[m.name]?.status||'UNKNOWN';
+    if(s==='UP')a.up++;else if(s==='DOWN')a.down++;else a.issue++;return a;
+  },{up:0,down:0,issue:0});
+  document.getElementById('main').innerHTML=`
+    <h1>System Status</h1>
+    <p class="sub">Monitoring ${monitors.length} services</p>
+    <div class="sums">
+      <div class="sum"><div class="num" style="color:#3fb950">${c.up}</div><div class="lbl">Operational</div></div>
+      <div class="sum"><div class="num" style="color:#f85149">${c.down}</div><div class="lbl">Down</div></div>
+      <div class="sum"><div class="num" style="color:#d29922">${c.issue}</div><div class="lbl">Issues</div></div>
+    </div>
+    ${monitors.map(m=>{
+      const s=states[m.name]||{};
+      const cls=s.status==='UP'?'up':s.status==='DOWN'?'down':s.status==='SLOW'?'slow':'warn';
+      return `<div class="card"><div><div class="card-n">${esc(m.name)}</div><div class="card-u">${esc(m.url)}</div><div class="card-m">⏱ ${s.latency||'—'}ms &middot; ${s.checkedAt?new Date(s.checkedAt).toLocaleString():'—'}</div></div><div class="badge ${cls}"><span class="dot"></span>${s.status||'UNKNOWN'}</div></div>`;
+    }).join('')}`;
+}
+
+function renderLogin() {
+  document.getElementById('main').innerHTML=`
+    <div class="login-box"><h2>Admin Login</h2>
+    <input type="password" id="pw" placeholder="GitHub Personal Access Token" />
+    <br><br><button class="btn" onclick="doLogin()">Login</button></div>`;
+}
+
+function doLogin() {
+  token = document.getElementById('pw').value;
+  sessionStorage.setItem('ut', token);
+  document.getElementById('btnAdmin').classList.remove('hide');
+  document.getElementById('btnLogout').classList.remove('hide');
+  document.getElementById('btnLogin').classList.add('hide');
+  showPage('admin');
+}
+
+function doLogout() {
+  token=''; sessionStorage.removeItem('ut');
+  document.getElementById('btnAdmin').classList.add('hide');
+  document.getElementById('btnLogout').classList.add('hide');
+  document.getElementById('btnLogin').classList.remove('hide');
+  showPage('status');
+}
+
+async function renderAdmin() {
+  if(!token) return showPage('login');
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2>Admin</h2>
+      <button class="btn btn-sm" onclick="showForm(-1)">+ Add</button>
+    </div>
+    <div id="amsg"></div>
+    <table><thead><tr><th>Name</th><th>URL</th><th>Type</th><th>Actions</th></tr></thead>
+    <tbody>${monitors.map((m,i)=>`
+      <tr><td>${esc(m.name)}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.url)}</td>
+      <td>${m.type}</td>
+      <td style="display:flex;gap:5px">
+        <button class="btn btn-sm" onclick="showForm(${i})">Edit</button>
+        <button class="btn btn-sm danger" onclick="delMonitor(${i})">Del</button>
+      </td></tr>`).join('')}</tbody></table>`;
+}
+
+function showForm(idx) {
+  const m = idx>=0 ? monitors[idx] : {name:'',url:'',type:'http',keyword:''};
+  document.getElementById('main').innerHTML=`
+    <div class="login-box" style="max-width:500px">
+      <h2>${idx>=0?'Edit':'Add'} Monitor</h2>
+      <div id="fmsg"></div>
+      <div class="in"><input id="fn" value="${esc(m.name)}" placeholder="Name" /></div>
+      <div class="in"><input id="fu" value="${esc(m.url)}" placeholder="https://..." /></div>
+      <div class="in"><select id="ft"><option ${m.type=='http'?'selected':''}>http</option><option ${m.type=='keyword'?'selected':''}>keyword</option><option ${m.type=='ssl'?'selected':''}>ssl</option></select></div>
+      <div class="in" id="fkdiv" style="display:${m.type=='keyword'?'':'none'}"><input id="fk" value="${esc(m.keyword||'')}" placeholder="Keyword" /></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-sm" onclick="showPage('admin')">Cancel</button>
+        <button class="btn" onclick="saveMonitor(${idx})">Save</button>
+      </div>
+    </div>`;
+  document.getElementById('ft').onchange=()=>{
+    document.getElementById('fkdiv').style.display=document.getElementById('ft').value==='keyword'?'':'none';
+  };
+}
+
+async function saveMonitor(idx) {
+  const form = {
+    name: document.getElementById('fn').value,
+    url: document.getElementById('fu').value,
+    type: document.getElementById('ft').value,
+    keyword: document.getElementById('fk')?.value||'',
+  };
+  if(!form.name||!form.url) return document.getElementById('fmsg').textContent='Fill required fields';
+  const list = idx>=0 ? monitors.map((m,i)=>i===idx?form:m) : [...monitors, form];
+  try {
+    const r = await fetch(`${API}/contents/monitors.json`);
+    const d = await r.json();
+    const res = await fetch(`${API}/contents/monitors.json`, {
+      method:'PUT',
+      headers:{Authorization:`bearer ${token}`, 'Content-Type':'application/json'},
+      body:JSON.stringify({message:'update monitors', content:btoa(unescape(encodeURIComponent(JSON.stringify(list,null,2)))), sha:d.sha})
+    });
+    if(!res.ok) throw new Error((await res.json()).message);
+    monitors = list;
+    document.getElementById('amsg').textContent = 'Saved!';
+    document.getElementById('amsg').className = 'msg';
+    showPage('admin');
+  } catch(e) { document.getElementById('fmsg').textContent='Error: '+e.message; }
+}
+
+async function delMonitor(idx) {
+  if(!confirm('Delete '+monitors[idx].name+'?')) return;
+  const list = monitors.filter((_,i)=>i!==idx);
+  try {
+    const r = await fetch(`${API}/contents/monitors.json`);
+    const d = await r.json();
+    await fetch(`${API}/contents/monitors.json`, {
+      method:'PUT',
+      headers:{Authorization:`bearer ${token}`, 'Content-Type':'application/json'},
+      body:JSON.stringify({message:'delete monitor', content:btoa(unescape(encodeURIComponent(JSON.stringify(list,null,2)))), sha:d.sha})
+    });
+    monitors = list;
+    document.getElementById('amsg').textContent='Deleted!';
+    document.getElementById('amsg').className='msg';
+    showPage('admin');
+  } catch(e) { document.getElementById('amsg').textContent='Error: '+e.message; }
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+
+// Init
+if(token){
+  document.getElementById('btnAdmin').classList.remove('hide');
+  document.getElementById('btnLogout').classList.remove('hide');
+  document.getElementById('btnLogin').classList.add('hide');
+}
+loadData().then(()=>showPage('status'));
+setInterval(()=>loadData().then(()=>showPage(document.querySelector('.active')?.textContent?.toLowerCase()==='admin'?'admin':'status')), 10000);
+</script>
+</body>
+</html>
