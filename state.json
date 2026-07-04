@@ -4,11 +4,5 @@
     "latency": 110,
     "error": null,
     "checkedAt": 1783143250252
-  },
-  "Example": {
-    "status": "UP",
-    "latency": 25,
-    "error": null,
-    "checkedAt": 1783136231348
   }
 }
