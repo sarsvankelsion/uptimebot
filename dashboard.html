@@ -112,16 +112,24 @@ function page(p){
 function renderStatus(){
   let u=0,d=0,i=0;
   M.forEach(m=>{let s=S[m.name]?.status||'U';if(s==='UP')u++;else if(s==='DOWN')d++;else i++;});
+  const ts=Date.now();
   document.getElementById('main').innerHTML=
-    `<h1>System Status</h1><p class="sub">${M.length} services</p>
+    `<h1>System Status</h1><p class="sub">${M.length} services · Updated ${new Date().toLocaleTimeString()}</p>
     <div class="sums"><div class="sum"><div class="num" style="color:#3fb950">${u}</div><div class="lbl">Operational</div></div>
     <div class="sum"><div class="num" style="color:#f85149">${d}</div><div class="lbl">Down</div></div>
     <div class="sum"><div class="num" style="color:#d29922">${i}</div><div class="lbl">Issues</div></div></div>
     ${M.map(m=>{
       let s=S[m.name]||{},c=s.status==='UP'?'up':s.status==='DOWN'?'down':s.status==='SLOW'?'slow':'warn';
-      return `<div class="card"><div><div class="card-n">${esc(m.name)}</div><div class="card-u">${esc(m.url)}</div><div class="card-m">⏱ ${s.latency||'—'}ms · ${s.checkedAt?new Date(s.checkedAt).toLocaleString():'—'} ${m.type!=='http'?'· '+m.type:''}</div></div><div class="badge ${c}"><span class="dot"></span>${s.status||'Waiting'}</div></div>`;
-    }).join('')}`;
+      let extra='';
+      if(m.type==='ssl'&&s.daysLeft!==undefined)extra=` · 🔒 SSL: ${s.daysLeft}d`;
+      else if(m.type==='ssl')extra=' · 🔒 SSL';
+      else if(m.type==='keyword')extra=' · 🔑 Keyword';
+      let ago=s.checkedAt?formatAgo(ts-s.checkedAt):'—';
+      return `<div class="card"><div><div class="card-n">${esc(m.name)}</div><div class="card-u">${esc(m.url)}</div><div class="card-m">⏱ ${s.latency||'—'}ms · ${ago} ago${extra}</div></div><div class="badge ${c}"><span class="dot"></span>${s.status||'Waiting'}</div></div>`;
+    }).join('')}
+    <div style="margin-top:20px;text-align:center"><a href="https://github.com/sarsvankelsion/uptimebot/actions" target="_blank" style="color:#58a6ff;font-size:.85rem">View Workflow Runs →</a></div>`;
 }
+function formatAgo(ms){if(ms<60000)return Math.round(ms/1000)+'s';if(ms<3600000)return Math.floor(ms/60000)+'m';return Math.floor(ms/3600000)+'h';}
 
 function renderLogs(){
   if(!T)return page('login');
@@ -130,7 +138,8 @@ function renderLogs(){
     `<h1>Workflow Logs</h1><p class="sub">Recent 10 runs</p>
     ${L.length?L.map(x=>{
       let c=x.c==='success'?'#3fb950':x.c==='failure'?'#f85149':'#d29922';
-      return `<div class="log-entry"><span>#${x.n} ${x.w} — <span class="lg-s" style="color:${c}">${x.c||x.s}</span></span><span style="color:#8b949e">${new Date(x.t).toLocaleString()}</span></div>`;
+      let url=`https://github.com/sarsvankelsion/uptimebot/actions/runs/${x.id}`;
+      return `<div class="log-entry"><span><a href="${url}" target="_blank" style="color:#58a6ff;text-decoration:none">#${x.n}</a> ${x.w} — <span class="lg-s" style="color:${c}">${x.c||x.s}</span></span><span style="color:#8b949e">${new Date(x.t).toLocaleString()}</span></div>`;
     }).join(''):'<p style="color:#8b949e">No logs loaded</p>'}
     <button class="btn btn-sm" style="margin-top:12px" onclick="loadLogs().then(()=>renderLogs())">Refresh</button>`;
 }

@@ -30,7 +30,10 @@
    - HTTP/API monitor: check status code
    - Slow response alert: > 5000ms
    - Keyword monitor: check từ khóa trong body
-   - SSL expiry: check cert < 15 ngày
+   - SSL expiry: check cert < 15 ngày (tls module)
    - Dashboard: status page + CRUD monitor
    - Dọn workflow cũ tự động
-   - Hiển thị workflow log trên dashboard (todo)
+   - Hiển thị workflow log trên dashboard ✅
+   - Settings: webhook URL config ✅
+   - Discord notifications: detailed embeds + cycle summary ✅
+   - SSL expiry display on status page ✅

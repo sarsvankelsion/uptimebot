@@ -96,10 +96,22 @@ async function checkHTTP(url) {
 }
 
 async function checkSSL(url) {
+  const tls = require('tls');
+  const https = require('https');
   try {
     const hostname = new URL(url).hostname;
-    await fetch(`https://${hostname}`, { method: 'HEAD' });
-    return { ok: true, daysLeft: 30, error: null };
+    const daysLeft = await new Promise((resolve, reject) => {
+      const socket = tls.connect({ host: hostname, port: 443, servername: hostname, rejectUnauthorized: false }, () => {
+        const cert = socket.getPeerCertificate();
+        if (!cert || !cert.valid_to) { socket.destroy(); return reject(new Error('No certificate')); }
+        const days = Math.floor((new Date(cert.valid_to) - Date.now()) / 86400000);
+        socket.destroy();
+        resolve(days);
+      });
+      socket.on('error', reject);
+      socket.setTimeout(10000, () => { socket.destroy(); reject(new Error('Timeout')); });
+    });
+    return { ok: daysLeft > 15, daysLeft, error: null };
   } catch (err) {
     return { ok: false, daysLeft: 0, error: err.message };
   }
