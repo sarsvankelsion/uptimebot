@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   check:
@@ -24,11 +25,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run monitoring cycles
+      - name: Send trigger notification
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-          MONITORS_JSON: ${{ secrets.MONITORS_JSON }}
-        shell: bash
+        run: |
+          MONITORS=$(jq -r '[.[].name] | join(", ")' monitors.json)
+          curl -s -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"🔄 Monitor Started\",\"color\":3447003,\"fields\":[{\"name\":\"Monitors\",\"value\":\"$MONITORS\",\"inline\":false}],\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}]}"
+
+      - name: Run monitoring
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
           node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
 
@@ -42,9 +50,21 @@ jobs:
             git push
           fi
 
+      - name: Clean old workflow runs
+        run: |
+          RUNS=$(curl -s -H "Authorization: bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?per_page=100" | \
+            jq -r '.workflow_runs[] | select(.status == "completed") | select(.created_at < (now - 86400 | strftime("%Y-%m-%dT%H:%M:%SZ"))) | .id')
+          for id in $RUNS; do
+            echo "Deleting run $id"
+            curl -s -X DELETE \
+              -H "Authorization: bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$id"
+          done
+
       - name: Trigger next run
         run: |
-          curl -X POST \
+          curl -s -X POST \
             -H "Authorization: bearer ${{ secrets.PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/dispatches \

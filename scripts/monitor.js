@@ -2,8 +2,11 @@ const fs = require('fs');
 const path = require('path');
 
 const STATE_FILE = path.join(__dirname, '..', 'state.json');
+const MONITORS_FILE = path.join(__dirname, '..', 'monitors.json');
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const MONITORS = JSON.parse(process.env.MONITORS_JSON || '[]');
+let MONITORS;
+try { MONITORS = JSON.parse(fs.readFileSync(MONITORS_FILE, 'utf8')); }
+catch { MONITORS = []; }
 const SLOW_THRESHOLD = 5000;
 const TIMEOUT = 10000;
 const COLORS = { UP: 0x57F287, DOWN: 0xED4245, SLOW: 0xFEE75C, WARN: 0xFFA500 };
