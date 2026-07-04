@@ -26,10 +26,9 @@ jobs:
           node-version: 22
 
       - name: Send trigger notification
-        env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          WH="${WEBHOOK_URL:-$(jq -r '.webhookUrl // ""' config.json)}"
+          WH=$(jq -r '.webhookUrl // ""' config.json)
+          [ -z "$WH" ] && WH="${{ secrets.WEBHOOK_URL }}"
           [ -z "$WH" ] && echo "No webhook URL" && exit 0
           MONITORS=$(jq -r '[.[].name] | join(", ")' monitors.json)
           curl -s -X POST "$WH" \
@@ -37,10 +36,9 @@ jobs:
             -d "{\"embeds\":[{\"title\":\"🔄 Monitor Started\",\"color\":3447003,\"fields\":[{\"name\":\"Monitors\",\"value\":\"$MONITORS\",\"inline\":false}],\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}]}"
 
       - name: Run monitoring
-        env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          export WEBHOOK_URL="${WEBHOOK_URL:-$(jq -r '.webhookUrl // ""' config.json)}"
+          export WEBHOOK_URL=$(jq -r '.webhookUrl // ""' config.json)
+          [ -z "$WEBHOOK_URL" ] && export WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
           node scripts/monitor.js 2>&1 || echo "Script failed with exit code $?"
 
       - name: Commit state
