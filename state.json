@@ -3,13 +3,13 @@
     "status": "UP",
     "latency": 124,
     "error": null,
-    "checkedAt": 1783339037495
+    "checkedAt": 1783339293501
   },
   "DQBot": {
     "status": "DOWN",
-    "latency": 103,
+    "latency": 142,
     "error": null,
-    "checkedAt": 1783339037598,
+    "checkedAt": 1783339293643,
     "downtimeStart": 1783260960516
   }
 }
