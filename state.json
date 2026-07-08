@@ -1,9 +1,9 @@
 {
   "DQCasio": {
     "status": "UP",
-    "latency": 108,
+    "latency": 68,
     "error": null,
-    "checkedAt": 1783529001493,
+    "checkedAt": 1783529257471,
     "downtimeStart": 1783434943460
   },
   "DQBot": {
@@ -15,9 +15,9 @@
   },
   "DqBot": {
     "status": "UP",
-    "latency": 66,
+    "latency": 145,
     "error": null,
-    "checkedAt": 1783529001559,
+    "checkedAt": 1783529257616,
     "downtimeStart": 1783517806888
   }
 }
